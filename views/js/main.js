@@ -398,6 +398,8 @@ var pizzaElementGenerator = function(i) {
   return pizzaContainer;
 };
 
+var pizzaSlice = document.querySelector("#pizzaSize");
+
 // resizePizzas(size) is called when the slider in the "Our Pizzas" section of the website moves.
 var resizePizzas = function(size) { 
   window.performance.mark("mark_start_resize");   // User Timing API function
@@ -406,13 +408,13 @@ var resizePizzas = function(size) {
   function changeSliderLabel(size) {
     switch(size) {
       case "1":
-        document.querySelector("#pizzaSize").innerHTML = "Small";
+        pizzaSlice.innerHTML = "Small";
         return;
       case "2":
-        document.querySelector("#pizzaSize").innerHTML = "Medium";
+        pizzaSlice.innerHTML = "Medium";
         return;
       case "3":
-        document.querySelector("#pizzaSize").innerHTML = "Large";
+        pizzaSlice.innerHTML = "Large";
         return;
       default:
         console.log("bug in changeSliderLabel");
@@ -421,39 +423,33 @@ var resizePizzas = function(size) {
 
   changeSliderLabel(size);
 
-  // Returns the size difference to change a pizza element from one size to another. Called by changePizzaSlices(size).
-  function determineDx (elem, size) {
-    var oldwidth = elem.offsetWidth;
-    var windowwidth = document.querySelector("#randomPizzas").offsetWidth;
-    var oldsize = oldwidth / windowwidth;
-
-    // TODO: change to 3 sizes? no more xl?
-    // Changes the slider value to a percent width
-    function sizeSwitcher (size) {
-      switch(size) {
-        case "1":
-          return 0.25;
-        case "2":
-          return 0.3333;
-        case "3":
-          return 0.5;
-        default:
-          console.log("bug in sizeSwitcher");
-      }
+  // Changes the slider value to a percent width
+  function sizeSwitcher (size) {
+    switch(size) {
+      case "1":
+        return 25;
+      case "2":
+        return 33.3;
+      case "3":
+        return 50;
+      default:
+        console.log("bug in sizeSwitcher");
     }
-
-    var newsize = sizeSwitcher(size);
-    var dx = (newsize - oldsize) * windowwidth;
-
-    return dx;
   }
+  
+  // Just figure this out once, not every time.
+  var sizePercentage = sizeSwitcher(size);
+    
+  // get this value once.
+  // var windowwidth = document.querySelector("#randomPizzas").offsetWidth;
 
   // Iterates through pizza elements on the page and changes their widths
   function changePizzaSizes(size) {
-    for (var i = 0; i < document.querySelectorAll(".randomPizzaContainer").length; i++) {
-      var dx = determineDx(document.querySelectorAll(".randomPizzaContainer")[i], size);
-      var newwidth = (document.querySelectorAll(".randomPizzaContainer")[i].offsetWidth + dx) + 'px';
-      document.querySelectorAll(".randomPizzaContainer")[i].style.width = newwidth;
+    var pizzaContainer = document.querySelectorAll(".randomPizzaContainer");
+    for (var i = 0; i < pizzaContainer.length; i++) {
+      // var dx = determineDx(pizzaContainer[i], sizePercentage);
+      // var newwidth = (pizzaContainer[i].offsetWidth + dx) + 'px';
+      pizzaContainer[i].style.width = sizePercentage + '%';
     }
   }
 
@@ -499,33 +495,52 @@ function logAverageFrame(times) {   // times is the array of User Timing measure
 
 // Moves the sliding background pizzas based on scroll position
 function updatePositions() {
-  frame++;
-  window.performance.mark("mark_start_frame");
+  // frame++;
+  // window.performance.mark("mark_start_frame");
 
+  var scrollTop = document.body.scrollTop; // save just once per udpate.
   var items = document.querySelectorAll('.mover');
+  
+  // First figure out the values for all items.
+  var data = [];
   for (var i = 0; i < items.length; i++) {
-    var phase = Math.sin((document.body.scrollTop / 1250) + (i % 5));
-    items[i].style.left = items[i].basicLeft + 100 * phase + 'px';
+    var d = {};
+    d.item = items[i];
+    var phase = Math.sin((scrollTop / 1250) + (i % 5));
+    d.style_left = d.item.basicLeft + 100 * phase + 'px';
+    data.push(d);
+  }
+  
+  // Then update all items at once.
+  for (var i = 0; i < data.length; i++ ) {
+    data[i].item.style.left = data[i].style_left;
   }
 
-  // User Timing API to the rescue again. Seriously, it's worth learning.
-  // Super easy to create custom metrics.
-  window.performance.mark("mark_end_frame");
-  window.performance.measure("measure_frame_duration", "mark_start_frame", "mark_end_frame");
-  if (frame % 10 === 0) {
-    var timesToUpdatePosition = window.performance.getEntriesByName("measure_frame_duration");
-    logAverageFrame(timesToUpdatePosition);
-  }
+  // // User Timing API to the rescue again. Seriously, it's worth learning.
+  // // Super easy to create custom metrics.
+  // window.performance.mark("mark_end_frame");
+  // window.performance.measure("measure_frame_duration", "mark_start_frame", "mark_end_frame");
+  // if (frame % 10 === 0) {
+  //   var timesToUpdatePosition = window.performance.getEntriesByName("measure_frame_duration");
+  //   logAverageFrame(timesToUpdatePosition);
+  // }
 }
 
 // runs updatePositions on scroll
-window.addEventListener('scroll', updatePositions);
+// window.addEventListener('scroll', updatePositions);
 
 // Generates the sliding pizzas when the page loads.
 document.addEventListener('DOMContentLoaded', function() {
   var cols = 8;
   var s = 256;
-  for (var i = 0; i < 200; i++) {
+  
+  // Load the pizza image once.
+  
+  var movingPizzaCollection = document.querySelector("#movingPizzas1");
+  
+  // Why do we need 200 of these? Seems 20 is perfectly suitable.
+  // This way the load is faster, and as we put them in their own layers, we don't kill RAM.
+  for (var i = 0; i < 20; i++) {
     var elem = document.createElement('img');
     elem.className = 'mover';
     elem.src = "images/pizza.png";
@@ -533,7 +548,9 @@ document.addEventListener('DOMContentLoaded', function() {
     elem.style.width = "73.333px";
     elem.basicLeft = (i % cols) * s;
     elem.style.top = (Math.floor(i / cols) * s) + 'px';
-    document.querySelector("#movingPizzas1").appendChild(elem);
+    movingPizzaCollection.appendChild(elem);
   }
-  updatePositions();
+  
+  // Don't know why we need to update positions during this load.
+  // updatePositions();
 });

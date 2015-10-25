@@ -33,7 +33,11 @@ form {
   position: fixed;
   width: 256px;
   z-index: -1;
+  /* This to put movable guys on their own layer. */
+  will-change: transform;
 }
+
+
 
 .randomPizzaContainer {
   float: left;
